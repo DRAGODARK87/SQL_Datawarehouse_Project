@@ -1,7 +1,7 @@
 # SQL_Datawarehouse_Project
 Building a modern data warehouse with SQL Server, including ETL processes, Data modelling , and analytics
 
-**#Data warehouse and Analytics Project**
+**Data warehouse and Analytics Project**
 
 
 Welcome to the **Data Warehouse and Analyytics Project** repository!🎶
@@ -34,7 +34,7 @@ Develop SQ - based analytics to deliver detailed insights into :
 
 These insights empower stakeholders with key business metrics , enabling strategic decision -making.
 
-##License
+## License
 
-Project is licensed under the [MIT License](LICENSE). YOu are free to use ,modify and share this project with proper attribution
+Project is licensed under the [MIT License](LICENSE). You are free to use ,modify and share this project with `proper attribution`
 
