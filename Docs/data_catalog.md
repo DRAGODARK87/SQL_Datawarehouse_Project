@@ -1,6 +1,6 @@
 # **Data Dictionay for Gold layer**
 
-## ** Overview **
+## **Overview**
 
 The Gold Layer is the business - level data representation, structured to support analytical and reporting use case. It consists of **dimension tables** and **fact tables** for specific business metrics.
 
@@ -45,7 +45,7 @@ The Gold Layer is the business - level data representation, structured to suppor
 | start_date     | DATETIME     | The date when the product became available for sale, stored in DATETIME format           |
 
 
-###**3. gold.fact_sales**
+### **3. gold.fact_sales**
 
 + **Purpose :** Stores transactional sales data for analytical purposes.<br>
 + **Columns :**
