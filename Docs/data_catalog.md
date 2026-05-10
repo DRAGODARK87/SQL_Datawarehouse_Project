@@ -8,8 +8,8 @@ The Gold Layer is the business - level data representation, structured to suppor
 
 ### **1. gold.dim_customers**
 
-**+ Purpose :** Stores customer details enriched with demographic and geographic data.<br>
-**+ Columns :** 
++ **Purpose :** Stores customer details enriched with demographic and geographic data.<br>
++ **Columns :** 
 
 | Column Name     | Data Type     | Description                                                                 |
 |-----------------|---------------|-----------------------------------------------------------------------------|
@@ -27,5 +27,19 @@ The Gold Layer is the business - level data representation, structured to suppor
 
 ### **2. gold.dim_products**
 
-**+ Purpose :** Provides information about the products and their attributes.
-**+ Columns :**
++ **+ Purpose :** Provides information about the products and their attributes.<br>
++ **Columns :**
+
+| Column Name    | Data Type    | Description                                                                              |
+|----------------|--------------|------------------------------------------------------------------------------------------|
+| product_key    | INT          | Surrogate key uniquely identifying each product record in the dimension table            |
+| product_id     | INT          | Unique numerical identifier assigned to each product                                     |
+| product_number | NVARCHAR(50) | Alphanumeric identifier representing the product, used for tracking and reference        |
+| product_name   | NVARCHAR(50) | Descriptive name of the product, including details such as type, color and size          |
+| category_id    | NVARCHAR(50) | A unique identifier for the product's category, linking to its high level classification |
+| category       | NVARCHAR(50) | The broader category of the product (eg. Bikes)                                          |
+| subcategory    | NVARCHAR(50) | A more detailed classification of the product within the category, such as product type  |
+| maintenance    | NVARCHAR(50) | Indicates whether the product requires maintenance (eg. Yes, No)                         |
+| cost           | INT          | The cost or base price of the product, measured in monetary units                        |
+| product_line   | NVARCHAR(50) | The specific product line or series to which the product belongs (eg. Road, Mountain)    |
+| start_date     | DATETIME     | The date when the product became available for sale, stored in DATETIME format           |
