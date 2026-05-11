@@ -1,0 +1,693 @@
+
+
+
+use DataWarehouse
+
+--Database Exploration
+ --Explore all objects in the database
+select * from INFORMATION_SCHEMA.tables
+
+--Explore all columns in the database
+select * from INFORMATION_SCHEMA.COLUMNS
+where TABLE_NAME = 'dim_customers'
+
+--Dimension Exploration
+/*Identifying the unique values (or categories) in each dimension.
+Recognizing how data might be grouped or segmented.which is useful for later analysis*/
+
+--Explore all countries our customers come from
+
+use DataWarehouseAnalytics
+
+select distinct country from [gold.dim_customers]
+
+--Explore all product categories 'The major division'
+
+select distinct category,subcategory,product_name from [gold.dim_products]
+order by 1,2,3
+
+--Date Exploration : Identify the earliest and latest dates(boundaries) to understand the scope of data and the timespan
+--Find the date of the first and last order
+
+select
+min(order_date) earliest,
+max(order_date) lastest
+from [gold.fact_sales]
+
+-- How many years of sales are available
+
+select  
+datediff(year,earliest,lastest) yearofsale
+from 
+(
+select
+min(order_date) earliest,
+max(order_date) lastest
+from [gold.fact_sales]) t
+
+
+--Find the youngest and oldest customer
+
+select 
+max(birthdate) youngest,
+datediff(year,max(birthdate),getdate()) agedifftoyoungest,
+min(birthdate) oldest,
+datediff(year,min(birthdate),getdate()) agedifftooldest,
+DATEDIFF(year,min(birthdate),max(birthdate)) yearsofagediff
+from [dbo].[gold.dim_customers]
+
+--Measures Exploration : calculate the key metric of the business(Big Numbers) . Highest level of aggregation| Lowest level of details
+
+--Find the total sales
+--Find how many items are sold
+--Find the average selling price
+--Find the total number of orders
+--Find the total number of products
+--Find the total number of customers
+--Find the total number of customers that has placed an order
+
+
+
+select * from [dbo].[gold.fact_sales]
+select * from [gold.dim_customers]
+
+
+select 
+sum(sales_amount) totalsales,
+sum(quantity) totalitemssold,
+avg(price) avgsellingprice,
+count(order_number) totalnumberoforders,
+count(product_key) totalnumberofproducts,
+count(customer_key) totalnumberofcustomer
+from [dbo].[gold.fact_sales]
+
+select count(distinct order_number) totalorderplacedbydistinctcustomer from [dbo].[gold.fact_sales]
+select count(*) from[dbo].[gold.dim_products]
+select count(*) from [gold.dim_customers]
+select count(distinct f.customer_key ) cutmerplacedorder
+from [dbo].[gold.fact_sales] f
+left join [gold.dim_customers] c
+on f.customer_key = c.customer_key
+
+
+--Generate report that shows all key metrics 
+
+
+select 'Total Sales' Measured_name ,sum(sales_amount) Measured_value from [dbo].[gold.fact_sales]
+union all
+select 'Total Quantity' Measured_name, sum(quantity) Measured_value from [dbo].[gold.fact_sales]
+union all
+select 'Average selling price' Measured_name, avg(price) Measured_value from [dbo].[gold.fact_sales]
+union all
+select 'Total number of orders' Measured_name, count(order_number) Measured_value from [dbo].[gold.fact_sales]
+union all
+select 'Total number of distinct customer orders' Measured_name, count(distinct order_number) Measured_value from [dbo].[gold.fact_sales]
+union all
+select 'Total number of orders' Measured_name, count(order_number) Measured_value from [dbo].[gold.fact_sales]
+union all
+select 'Total number of product' Measured_name, count(product_key) Measured_value from [gold.dim_products]
+union all
+select 'Total number of Customers' Measured_name, count(customer_key) Measured_value from [gold.dim_customers]
+union all
+select 'Total number of sale Customers' Measured_name, count(customer_key) Measured_value from [gold.fact_sales]
+union all
+select 'Total number of distinct sale Customers' Measured_name, count(distinct customer_key) Measured_value from [gold.fact_sales]
+
+--Magnitude : Compare the measure values by categories. It helps us understand the importance of different categories
+
+--Find the total number customers by countries
+select
+country,
+count(*) Total_customers
+from  [gold.dim_customers]
+group by country
+order by count(*) desc
+
+
+--find the total customers by gender
+select * from [gold.dim_customers]
+
+select 
+gender,
+count(*) Total_gender
+from  [gold.dim_customers]
+group by gender
+order by count(*) desc
+
+
+--Find total products by category
+select * from [gold.dim_products]
+
+select 
+category,
+count(product_key) Total_category
+from [gold.dim_products]
+group by category
+order by count(*) desc
+
+--What is the average costs in each category?
+select * from [gold.fact_sales]
+select * from [gold.dim_products]
+
+select
+category,
+avg(cost) average_cost_of_category
+from [gold.dim_products]
+group by category
+order by avg(cost) desc
+
+--What is the total revenue generated for each category?
+
+select 
+p.category category,
+sum(f.sales_amount) Total_sales
+from [gold.dim_products] p
+left join [gold.fact_sales] f
+on f.product_key = p.product_key
+group by p.category
+order by sum(f.sales_amount) desc
+
+
+--Find total revenue is generated by each customer
+
+select 
+c.customer_key,
+c.first_name,
+c.last_name,
+sum(f.sales_amount) total_sales_by_customers
+from [gold.dim_customers] c
+left join [gold.fact_sales] f
+on c.customer_key =  f.customer_key
+group by c.customer_key,
+c.first_name,
+c.last_name
+order by sum(f.sales_amount)  desc
+
+--What is the distribution of sold items across countries ?
+select * from [gold.dim_customers]
+select * from [gold.fact_sales]
+select 
+c.country country,
+sum(f.quantity) sold_items
+from [gold.dim_customers] c
+left join  [gold.fact_sales] f
+on c.customer_key = f.customer_key
+group by c.country
+order by sum(f.quantity) desc
+
+--Low cardinality dimension means when the unique value is less in dimension like gender,country
+
+--Ranking : Order the values of dimensions by measure. Top N performers|bottom N performers
+
+--Which 5 products generate the highest revenue?
+
+select * from [gold.dim_products]
+select * from [gold.fact_sales]
+select
+* from(
+select 
+row_number() over(order by sum(f.sales_amount) desc) Ranked,
+p.product_name,
+sum(f.sales_amount) Total_revenue
+from [gold.dim_products] p
+left join [gold.fact_sales] f
+on p.product_key = f.product_key
+group by p.product_name
+
+)t
+where ranked <=5
+--What are the 5 worst performing products in terms of sales?
+
+
+select top 5
+p.product_name,
+sum(f.sales_amount) Total_revenue
+from [gold.dim_products] p
+left join [gold.fact_sales] f
+on p.product_key = f.product_key
+where f.product_key is not null
+group by p.product_name
+order by sum(f.sales_amount) 
+
+select
+* from(
+select 
+row_number() over(order by sum(f.sales_amount) ) Ranked,
+p.product_name,
+sum(f.sales_amount) Total_revenue
+from [gold.dim_products] p
+left join [gold.fact_sales] f
+on p.product_key = f.product_key
+where  f.product_key is not null
+group by p.product_name
+
+)t
+where ranked <=5 
+
+
+--Find the Top-10 customers who have generated the highest revenue and 3 customers with the fewest orders placed
+
+select * from (
+select 
+row_number() over(order by sum(f.sales_amount) desc,count(f.customer_key) asc) ranked,
+c.customer_key,
+c.first_name,
+c.last_name,
+sum(f.sales_amount)  total_revenue,
+count(distinct f.customer_key)  total_order
+from [gold.fact_sales] f
+left join
+[gold.dim_customers] c
+on c.customer_key = f.customer_key
+group by 
+c.customer_key,
+c.first_name,
+c.last_name
+) t
+where  ranked <=10
+
+--change over time : Analyze how a measure evolves over ti,e helps track trend and identify seasonality in your data
+
+
+--Analyze sales performance over time
+
+--year analysis
+
+select 
+year(order_date) order_year,
+sum(sales_amount) Total_sales,
+count(distinct customer_key) total_customer,
+sum(quantity) total_quantity
+from [dbo].[gold.fact_sales]
+where order_date is not null
+group by year(order_date)
+order by year(order_date)
+
+
+--month analysis
+
+select 
+month(order_date) order_year,
+sum(sales_amount) Total_sales,
+count(distinct customer_key) total_customer,
+sum(quantity) total_quantity
+from [dbo].[gold.fact_sales]
+where order_date is not null
+group by month(order_date)
+order by month(order_date)
+
+--year and month analysis
+
+
+select 
+datetrunc(month,order_date) order_date,
+sum(sales_amount) Total_sales,
+count(distinct customer_key) total_customer,
+sum(quantity) total_quantity
+from [dbo].[gold.fact_sales]
+where order_date is not null
+group by datetrunc(month,order_date)
+order by datetrunc(month,order_date)
+
+--Particular format 'yyyy-MMM'
+
+
+select 
+format(order_date,'yyyy-MMM') order_date,
+sum(sales_amount) Total_sales,
+count(distinct customer_key) total_customer,
+sum(quantity) total_quantity
+from [dbo].[gold.fact_sales]
+where order_date is not null
+group by format(order_date,'yyyy-MMM')
+order by format(order_date,'yyyy-MMM')
+
+
+--Cumulative Analysis : Aggregate the data progressively over time. Helps to understand whether our business is growing or decling
+
+-- Calculate the total sales per month 
+
+select 
+datetrunc(month,order_date) order_date,
+sum(sales_amount) Total_sales
+from [dbo].[gold.fact_sales]
+where order_date is not null
+group by datetrunc(month,order_date)
+order by datetrunc(month,order_date)
+
+-- The running total of sales over time
+
+	--Running total by whole											
+select
+*,
+sum(Total_sales) over(order by order_date) Running_Total
+from
+(
+select 
+datetrunc(month,order_date) order_date,
+sum(sales_amount) Total_sales
+from [dbo].[gold.fact_sales]
+where order_date is not null
+group by datetrunc(month,order_date)
+) t			
+
+
+-- Running total partitoned by year												
+
+select
+*,
+sum(Total_sales) over(partition by year(order_date) order by order_date) Running_Total
+from
+(
+select 
+datetrunc(month,order_date) order_date,
+sum(sales_amount) Total_sales
+from [dbo].[gold.fact_sales]
+where order_date is not null
+group by datetrunc(month,order_date)
+) t	
+
+--Moving Average of price
+
+select
+*,
+sum(Total_sales) over(order by order_date) Running_Total,
+Avg(Average_price) over(order by order_date) Running_average_price
+from
+(
+select 
+datetrunc(year,order_date) order_date,
+sum(sales_amount) Total_sales,
+avg(price) Average_price
+from [dbo].[gold.fact_sales]
+where order_date is not null
+group by datetrunc(year,order_date)
+) t	
+
+
+--Performance Analysis : Comparing the current value to a target value. Helps measure success and compare performance
+
+
+--Analyze the yearly performance of products by comparing each product's sales to both its average sales performance and the previous year's sales
+
+select 
+order_date_year,
+product_name,
+Total_sales,
+avg(Total_sales) over(partition by product_name) average_sales,
+Total_sales - avg(Total_sales) over(partition by product_name)  sales_difference_in_average ,
+case	
+	when Total_sales - avg(Total_sales) over(partition by product_name) >0 then 'Higher than average'
+	when Total_sales - avg(Total_sales) over(partition by product_name) =0 then 'On average'
+	else 'Lower than average'
+end Marking,
+lag(Total_sales) over (partition by product_name order by order_date_year) Previous_year,
+Total_sales-lag(Total_sales) over (partition by product_name order by order_date_year) YOY,
+case	
+	when Total_sales-lag(Total_sales) over (partition by product_name order by order_date_year) > 0 then 'Increase'
+	when Total_sales-lag(Total_sales) over (partition by product_name order by order_date_year) < 0 then 'Decrease'
+	else 'same'
+end YOY_marking
+from
+(
+select
+year( order_date) order_date_year,
+p.product_name,
+sum(sales_amount) total_sales
+from [gold.fact_sales] f
+left join [gold.dim_products] p
+on f.product_key = p.product_key
+where order_date is not null
+group by 
+year( order_date) ,
+p.product_name
+
+)t
+order by product_name,order_date_year
+
+
+--Part to whole :  Analyze how an individual part is performing compared to the overall, allowing us to understand which category has the greatest impact on the business
+
+--Which categories contribute the most to overall sales?
+
+select
+p.category,
+sum(sum(f.sales_amount)) over() All_cat_sales,
+sum(f.sales_amount) Total_sales,
+concat(round(convert(float,sum(f.sales_amount))/sum(sum(f.sales_amount)) over() *100,2),'%') percentage_sales
+from [gold.fact_sales] f
+left join [gold.dim_products] p
+on f.product_key = p.product_key
+group by p.category
+order by percentage_sales desc
+
+--Data segmentation : Group the data based on a specific range. Helps understand the correlation between 2 measures
+
+/* Segment products into cost ranges and 
+count how many products fall into each segment */
+
+select 
+count(product_name) Total_count,
+segmentation
+from
+(
+select
+product_name,
+cost,
+case 
+	when cost < 100 then 'Below 100'
+	when cost between 100 and 500 then '100-500'
+	when cost between 500 and 1000 then '500-1000'
+	when cost between 1000 and 1500 then '1000-1500'
+	when cost between 1500 and 2000 then '1500-2000'
+	else 'higher'
+end Segmentation
+from [gold.dim_products]
+)t
+group by Segmentation
+order by Total_count desc
+
+/* Group customers into 3 segments based on their spending behavior :
+ - VIP : Customers with at least 12 months of history and spending more than €5,000.
+ -Regular : Customers with at least 12 months of history but spending €5,000 or less
+ -New : Customers with a lifespan less than 12 months.
+And find the total number of customers by each group
+*/
+
+
+select category,count(first_name) total_count
+from(
+select *,
+case 
+	when Total_sales >5000 and timespan >= 12 then 'VIP'
+	when Total_sales <=5000  and timespan >= 12 then 'Regular'
+	else 'New'
+end category
+from
+(
+select 
+c.first_name,
+c.last_name,
+sum(f.sales_amount) Total_sales,
+min(f.order_date) first_order,
+max(f.order_date) last_order,
+datediff(month,min(f.order_date),max(f.order_date)) timespan
+from
+[gold.fact_sales] f
+left join
+[gold.dim_customers] c
+on f.customer_key = c.customer_key
+group by
+c.first_name,
+c.last_name)t
+)f
+group by category
+order by total_count desc
+
+/*
+===========================================================================
+Customer Report
+===========================================================================
+Purpose : 
+	- This report consolidates key customer metrics and behaviors
+
+Highlights :
+	1. Gathers essential fields such as names, ages and trasaction details.
+	2. Segments customers into categories (VIP, Regular,New) and age groups.
+	3. Aggregates customer -level metrics :
+		-total orders
+		-total sales
+		-total quantity purchased
+		-total products
+		-lifespan (in months)
+	4. Calculates valuable KPIs:
+		-recency (months since last order)
+		-average order value
+		-average monthly spend
+=======================================================================================
+*/
+
+/*
+--------------------------------------------------
+1) Base query :  Retrives core columns from tables
+---------------------------------------------------
+*/
+use DataWarehouse
+
+create or alter view gold.report_customers as
+
+with CTE_base_query as
+(
+select 
+c.customer_key,
+c.customer_number,
+concat(c.first_name,' ',c.last_name) customer_name,
+datediff(year,c.birth_date,getdate()) Age,
+f.order_number,
+f.product_key,
+f.sales_amount,
+f.quantity,
+f.order_date,
+f.shipping_date,
+f.due_date
+from [Gold].[fact_sales] f
+left join  [Gold].[dim_customers] c
+on c.customer_key = f.customer_key
+where f.order_date is not null 
+)
+
+,CTE_Customer_Aggregation as
+/*------------------------------------------------------------------------------------
+3) Aggregates customer -level metrics :
+		-total orders
+		-total sales
+		-total quantity purchased
+		-total products
+		-lifespan (in months)
+-----------------------------------------------------------------------------------------
+*/ 
+(
+select 
+customer_key,
+customer_number,
+customer_name,
+Age,
+count(distinct order_number) total_order,
+sum(sales_amount) total_sales,
+sum(quantity) total_quantity,
+count(distinct product_key) total_products,
+max(order_date) last_order,
+datediff(month,min(order_date),max(order_date)) lifespan
+from CTE_base_query
+group by
+customer_key,
+customer_number,
+customer_name,
+Age
+)
+
+
+/*
+-----------------------------------------------------------------------
+2. Segments customers into categories (VIP, Regular,New) and age groups.
+------------------------------------------------------------------------
+*/
+
+select * ,
+case 
+	when Total_sales >5000 and lifespan >= 12 then 'VIP'
+	when Total_sales <=5000  and lifespan >= 12 then 'Regular'
+	else 'New'
+end category,
+case 
+	when age < 20 then 'Under 20'
+	when age between 20 and 29  then '20 - 29'
+	when age between 30 and 39  then '30 - 39'
+	when age between 40 and 49  then '40 - 49'
+	else '50 and above'
+end age_group,
+datediff(month,last_order,getdate()) recency,
+--average order value
+convert(float,total_sales)/total_order average_order_value,
+--average monthly spend	
+case
+	when lifespan = 0 then total_sales
+	else convert(float,total_sales)/lifespan
+end average_monthly_sale
+from CTE_Customer_Aggregation;
+
+
+/*
+=====================================================================================
+Product Report
+=====================================================================================
+Purpose:
+	- This report consolidates key product metrics and behaviors.
+
+Highlights:
+	1. Gathers essential fields such as product name , category , subcategory and cost.
+	2. Segments products by revenue to identify High - Performers, Mid- Range or Low - Performers.
+	3. Aggregates product - level metrics :
+		-Total orders
+		-Total sales
+		-Total quatity sold
+		-Total customers (unique)
+		-lifespan (in months)
+	4. Calculates valuable KPIs:
+		-recency (months since last sale)
+		-average order revenue (AOR)
+		- Average monthly revenue
+
+=========================================================================================================
+*/
+
+create or alter view gold.report_products as
+
+with CTE_Product_metric as
+(
+select 
+f.product_key,
+p.category,
+p.subcategory,
+p.cost,
+count(distinct f.customer_key) Total_customers,
+count(distinct f.order_number) Total_orders,
+datediff(month,min(f.order_date),max(f.order_date)) lifespan,
+max(f.order_date) Last_order,
+sum(f.sales_amount) Total_sales,
+sum(f.quantity) Total_quantity
+from 
+Gold.fact_sales f
+left join
+Gold.dim_products p
+on f.product_key = p.product_key
+where f.order_date is not null
+group by
+f.product_key,
+p.category,
+p.subcategory,
+p.cost
+)
+
+select
+*,
+case 
+	when Total_quantity =0 then Total_sales
+	else Round(convert(float,Total_sales)/Total_quantity,2) 
+end average_selling_price,
+case 
+	when Total_sales between 200000 and 1205786 then 'High Performer'
+	when Total_sales between 30000  and 200000 then 'Medium Performer'
+	else 'Low Performer'
+End Segmented_list,
+--recency
+datediff(month,Last_order,getdate()) recency,
+--average order revenue (AOR)
+Total_sales/Total_orders AOR,
+-- Average monthly revenue
+Total_sales/lifespan Average_monthly_revenue
+from CTE_Product_metric
+
+select * from [Gold].[report_products]
+
+
