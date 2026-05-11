@@ -34,6 +34,17 @@ Develop SQ - based analytics to deliver detailed insights into :
 
 These insights empower stakeholders with key business metrics , enabling strategic decision -making.
 
+
+### Advance Data Analytics
+
+#### Objective
+ Perform advance analytics and develop reports based on analysis
+
+ **Customer Report**
+ **Product Report**
+
+These report gives overall big picture for business and assist them decision making
+ 
 ## License
 
 Project is licensed under the [MIT License](LICENSE). You are free to use ,modify and share this project with `proper attribution`
